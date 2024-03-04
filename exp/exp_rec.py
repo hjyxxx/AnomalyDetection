@@ -1,3 +1,4 @@
+import os
 import time
 
 import numpy as np
@@ -206,5 +207,82 @@ class ExpRec(ExpBasic):
             save_gradients(folder_path, self.model, epoch=epoch)
             save_parameters(self.model, epoch=epoch, writer=writer)
 
+            early_stopping(results['AUC@ROC'], self.model, folder_path)
+            if early_stopping.early_stop:
+                cprint.warn('Early Stopping')
+                break
 
+    def test(self, folder_path):
+        """
+        测试
+        :param folder_path:
+        :return:
+        """
+        train_dataset, train_loader = self._get_data(flag='train')
+        test_dataset, test_loader = self._get_data(flag='test')
 
+        self.model.load_state_dict(torch.load(os.path.join(folder_path, 'weights', 'model.pth')))
+        folder_path = folder_path.replace('/', '_')
+
+        # 创建文件夹
+        folder_path = './test_results/' + folder_path + "/"
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
+        self.model.eval()
+
+        train_total_preds = []
+        train_total_trues = []
+
+        test_total_preds = []
+        test_total_trues = []
+
+        with torch.no_grad():
+            for i, (batch_rec_x, batch_rec_y, batch_pre_x, batch_pre_y) in enumerate(train_loader):
+                batch_rec_x = batch_rec_x.float().to(self.device)
+                batch_rec_y = batch_rec_y.float().to(self.device)
+                outputs = self.model(batch_rec_x)
+
+                preds = outputs.detach().cpu().numpy()
+                trues = batch_rec_y.detach().cpu().numpy()
+
+                train_total_preds.append(preds)
+                train_total_trues.append(trues)
+
+        with torch.no_grad():
+            for i, (batch_rec_x, batch_rec_y, _, _) in enumerate(test_loader):
+                batch_rec_x = batch_rec_x.float().to(self.device)
+                batch_rec_y = batch_rec_y.float().to(self.device)
+                outputs = self.model(batch_rec_x)
+
+                preds = outputs.detach().cpu().numpy()
+                trues = batch_rec_y.detach().cpu().numpy()
+
+                test_total_preds.append(preds)
+                test_total_trues.append(trues)
+
+        train_total_preds = np.concatenate(train_total_preds, axis=0).transpose((0, 2, 3, 1))     # (N, T, V, C)
+        train_total_trues = np.concatenate(train_total_trues, axis=0).transpose((0, 2, 3, 1))   # (N, T, V, C)
+
+        test_total_preds = np.concatenate(test_total_preds, axis=0).transpose((0, 2, 3, 1))       # (N, T, V, C)
+        test_total_trues = np.concatenate(test_total_trues, axis=0).transpose((0, 2, 3, 1))     # (N, T, V, C)
+
+        # 保存结果
+        np.save(folder_path + 'train_preds.npy', train_total_preds, allow_pickle=True)
+        np.save(folder_path + 'train_trues.npy', train_total_trues, allow_pickle=True)
+        np.save(folder_path + 'train_metas.npy', train_dataset.seg_metas, allow_pickle=True)
+
+        np.save(folder_path + 'test_preds.npy', test_total_preds, allow_pickle=True)
+        np.save(folder_path + 'test_trues.npy', test_total_trues, allow_pickle=True)
+        np.save(folder_path + 'test_metas.npy', test_dataset.seg_metas, allow_pickle=True)
+
+        # 计算score
+        results, sc, gt = compute_result(test_total_preds, test_total_trues, test_dataset.seg_metas, test_dataset.label_dict)
+
+        print('| AUC@ROC {:5.4f} | AUC@PR {:5.4f} |'.format(
+            results['roc_auc'], results['pr_auc']
+        ))
+        np.save(folder_path + 'test_grounds.npy', gt, allow_pickle=True)
+        np.save(folder_path + 'test_scores.npy', sc, allow_pickle=True)
+        np.save(folder_path + "test_label_dict", test_dataset.label_dict, allow_pickle=True)
+        np.save(folder_path + "train_label_dict", train_dataset.label_dict, allow_pickle=True)
