@@ -1,0 +1,17 @@
+seg_len: 17
+seg_stride: 1
+for_len: 0
+ckp: []
+normalize_flag: 0
+vid_res: [856, 480]
+symm_range: True
+sub_mean: False
+seg_conf_th: 0.0
+transform: True
+divide: "random"
+train_txt_path: "configs/SH_Train.txt"
+test_txt_path: "configs/SH_Test.txt"
+train_ratio: 1
+vali_ratio: 0.0
+test_ratio: 0.0
+data_shuffle: False
