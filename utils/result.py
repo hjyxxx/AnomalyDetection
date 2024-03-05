@@ -85,7 +85,7 @@ def compute_result(preds, trues, metas, label_dict):
     results = {
         "fpr": fpr,
         "tpr": tpr,
-        "AUC@RUC": roc_auc,
+        "AUC@ROC": roc_auc,
         "precision": precision,
         "recall": recall,
         "AUC@PR": pr_auc

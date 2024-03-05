@@ -173,7 +173,7 @@ class ExpRec(ExpBasic):
             scheduler.step()
 
             ep_elapsed = (time.time() - ep_start_time) * 1000
-            cprint.info("Epoch End Train | ms/epoch {:5.2f} | loss {:5.8f} |".format(epoch, ep_elapsed, np.mean(train_loss)))
+            cprint.info("| Epoch {} end train | ms/epoch {:5.2f} | loss {:5.8f} |".format(epoch, ep_elapsed, np.mean(train_loss)))
             cprint.info("=" * 90)
 
             vali_loss, test_loss = None, None
@@ -207,7 +207,7 @@ class ExpRec(ExpBasic):
             save_gradients(folder_path, self.model, epoch=epoch)
             save_parameters(self.model, epoch=epoch, writer=writer)
 
-            early_stopping(results['AUC@ROC'], self.model, folder_path)
+            early_stopping(-results['AUC@ROC'], self.model, folder_path)
             if early_stopping.early_stop:
                 cprint.warn('Early Stopping')
                 break

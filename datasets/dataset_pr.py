@@ -10,12 +10,12 @@ from datasets.dataset_base import DatasetBase
 
 
 class DatasetPR(DatasetBase):
-    def __init__(self, path, seg_len, seg_stride, for_len, transform_list=None,
+    def __init__(self, path, seg_len, seg_stride, for_len, transform_list=None, ckp=None,
                  normalize_flag=0, vid_res=None, symm_range=True, sub_mean=False, seg_conf_th=0.0,
                  debug=False, flag='train',
                  divide='random', train_txt_path=None, test_txt_path=None,
                  train_ratio=1, vali_ratio=0, test_ratio=0, data_shuffle=False):
-        super(DatasetPR, self).__init__(path, seg_len, seg_stride, for_len, transform_list,
+        super(DatasetPR, self).__init__(path, seg_len, seg_stride, for_len, transform_list, ckp,
                                         normalize_flag, vid_res, symm_range, sub_mean, seg_conf_th,
                                         debug, flag,
                                         divide, train_txt_path, test_txt_path,
@@ -117,6 +117,9 @@ class DatasetPR(DatasetBase):
 
         self.seg_data_np, self.seg_metas = gen_data(self.path, video_list, self.seg_len, self.seg_stride,
                                                     self.vid_res, self.symm_range, self.sub_mean, self.normalize_flag, self.seg_conf_th)
+
+        if self.ckp is not None and self.ckp:
+            self.seg_data_np = self.seg_data_np[..., self.ckp]
 
     def _read_label(self):
         """

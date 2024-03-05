@@ -28,6 +28,7 @@ def data_provider(args, flag):
     for_len = args.for_len              # 预测长度
 
     transform = args.transform                  # 数据增强
+    ckp = args.ckp
 
     # 归一化
     normalize_flag = args.normalize_flag
@@ -56,7 +57,7 @@ def data_provider(args, flag):
 
     if task_name == 'rec':
         dataset = DatasetPR(path=path,
-                            seg_len=seg_len, seg_stride=seg_stride, for_len=for_len, transform_list=transform_list,
+                            seg_len=seg_len, seg_stride=seg_stride, for_len=for_len, transform_list=transform_list, ckp=ckp,
                             debug=debug, flag=flag,
                             normalize_flag=normalize_flag, vid_res=vid_res, symm_range=symm_range, sub_mean=sub_mean, seg_conf_th=seg_conf_th,
                             divide=divide, train_txt_path=train_txt_path, test_txt_path=test_txt_path,

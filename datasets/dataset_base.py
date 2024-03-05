@@ -2,7 +2,7 @@ from torch.utils.data import Dataset
 
 
 class DatasetBase(Dataset):
-    def __init__(self, path, seg_len, seg_stride, for_len, transform_list=None,
+    def __init__(self, path, seg_len, seg_stride, for_len, transform_list=None, ckp=None,
                  normalize_flag=0, vid_res=None, symm_range=True, sub_mean=False, seg_conf_th=0.0,
                  debug=False, flag='train',
                  divide='random', train_txt_path=None, test_txt_path=None,
@@ -25,6 +25,8 @@ class DatasetBase(Dataset):
         else:
             self.num_transform = len(transform_list)
             self.apply_transform = True
+
+        self.ckp = ckp
 
         # 数据集归一化参数
         self.vid_res = vid_res

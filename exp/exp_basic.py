@@ -3,14 +3,15 @@ import os
 import torch
 from cprint import cprint
 
-from models.bases import Test
+from models.bases import Test, TCN
 
 
 class ExpBasic:
     def __init__(self, args):
         self.args = args
         self.model_dict = {
-            'test': Test
+            'test': Test,
+            'TCN': TCN
 
         }
 

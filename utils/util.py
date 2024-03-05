@@ -41,4 +41,7 @@ def load_data_config(args, parser):
     add_yaml_to_argparse(yaml_data, parser)
     args = parser.parse_args()
 
+    if args.ckp:
+        args.node_num = len(args.ckp)
+
     return args
