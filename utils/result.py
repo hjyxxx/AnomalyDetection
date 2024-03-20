@@ -1,6 +1,7 @@
 import numpy as np
+from scipy.ndimage import gaussian_filter1d
 
-from utils.cal_metrics import cal_roc_auc, cal_pr_auc
+from utils.cal_metrics import cal_roc_auc, cal_pr_auc, cal_f1_acc
 
 
 def compute_result(preds, trues, metas, label_dict):
@@ -80,15 +81,18 @@ def compute_result(preds, trues, metas, label_dict):
     labels = np.concatenate(labels)
 
     fpr, tpr, roc_auc = cal_roc_auc(scores, labels)
-    precision, recall, pr_auc = cal_pr_auc(scores, labels)
+    _, _, pr_auc = cal_pr_auc(scores, labels)
+    acc, f1, precision, recall = cal_f1_acc(scores, labels)
 
     results = {
         "fpr": fpr,
         "tpr": tpr,
         "AUC@ROC": roc_auc,
+        "AUC@PR": pr_auc,
+        "F1": f1,
+        "ACC": acc,
         "precision": precision,
-        "recall": recall,
-        "AUC@PR": pr_auc
+        "recall": recall
     }
 
     return results, scores, labels
@@ -115,10 +119,12 @@ def smooth(y, n):
     :return:
     """
 
-    win = np.ones(n) / n
-    y = np.array([y[0]] * (n // 2) + y.tolist() + [y[-1]] * (n // 2))
+    y_smooth = gaussian_filter1d(y, sigma=40)
 
-    y_smooth = np.convolve(y, win, mode='valid')
+    # win = np.ones(n) / n
+    # y = np.array([y[0]] * (n // 2) + y.tolist() + [y[-1]] * (n // 2))
+    #
+    # y_smooth = np.convolve(y, win, mode='valid')
 
     return y_smooth
 

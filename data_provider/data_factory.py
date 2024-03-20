@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 
 from data_provider.data_utils import ae_trans_list
 from datasets.dataset_pr import DatasetPR
+from datasets.dataset_ws import DatasetWS
 
 
 def data_provider(args, flag):
@@ -45,6 +46,11 @@ def data_provider(args, flag):
     test_txt_path = args.test_txt_path          # 测试集txt文件
     data_shuffle = args.data_shuffle            # 是否打乱数据
 
+    train_scenes = args.train_scenes
+    vali_scenes = args.vali_scenes
+    test_scenes = args.test_scenes
+
+
     if flag in ['test', 'vali']:
         shuffle = False
         transform_list = None
@@ -57,20 +63,61 @@ def data_provider(args, flag):
 
     if task_name == 'rec':
         dataset = DatasetPR(path=path,
-                            seg_len=seg_len, seg_stride=seg_stride, for_len=for_len, transform_list=transform_list, ckp=ckp,
+                            seg_len=seg_len, seg_stride=seg_stride, for_len=0, transform_list=transform_list, ckp=ckp,
                             debug=debug, flag=flag,
                             normalize_flag=normalize_flag, vid_res=vid_res, symm_range=symm_range, sub_mean=sub_mean, seg_conf_th=seg_conf_th,
                             divide=divide, train_txt_path=train_txt_path, test_txt_path=test_txt_path,
-                            train_ratio=train_ratio, vali_ratio=vali_ratio, test_ratio=test_ratio, data_shuffle=data_shuffle
+                            train_scenes=train_scenes, vali_scenes=vali_scenes, test_scenes=test_scenes,
+                            train_ratio=train_ratio, vali_ratio=vali_ratio, test_ratio=test_ratio, data_shuffle=data_shuffle,
+                            task_name=task_name
                             )
 
         dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers,
                                 pin_memory=pin_memory)
+    elif task_name == 'pre':
+        dataset = DatasetPR(path=path,
+                            seg_len=seg_len, seg_stride=seg_stride, for_len=for_len, transform_list=transform_list, ckp=ckp,
+                            debug=debug, flag=flag,
+                            normalize_flag=normalize_flag, vid_res=vid_res, symm_range=symm_range, sub_mean=sub_mean, seg_conf_th=seg_conf_th,
+                            divide=divide, train_txt_path=train_txt_path, test_txt_path=test_txt_path,
+                            train_scenes=train_scenes, vali_scenes=vali_scenes, test_scenes=test_scenes,
+                            train_ratio=train_ratio, vali_ratio=vali_ratio, test_ratio=test_ratio, data_shuffle=data_shuffle,
+                            task_name=task_name
+                            )
+
+        dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers,
+                                pin_memory=pin_memory)
+    elif task_name == 'pr':
+        dataset = DatasetPR(path=path,
+                            seg_len=seg_len, seg_stride=seg_stride, for_len=for_len, transform_list=transform_list, ckp=ckp,
+                            debug=debug, flag=flag,
+                            normalize_flag=normalize_flag, vid_res=vid_res, symm_range=symm_range, sub_mean=sub_mean, seg_conf_th=seg_conf_th,
+                            divide=divide, train_txt_path=train_txt_path, test_txt_path=test_txt_path,
+                            train_scenes=train_scenes, vali_scenes=vali_scenes, test_scenes=test_scenes,
+                            train_ratio=train_ratio, vali_ratio=vali_ratio, test_ratio=test_ratio, data_shuffle=data_shuffle,
+                            task_name=task_name
+                            )
+
+        dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers,
+                                pin_memory=pin_memory)
+    elif task_name == 'ws':
+        dataset = DatasetWS(path=path,
+                            seg_len=seg_len, seg_stride=seg_stride, for_len=0, transform_list=transform_list, ckp=ckp,
+                            debug=debug, flag=flag,
+                            normalize_flag=normalize_flag, vid_res=vid_res, symm_range=symm_range, sub_mean=sub_mean, seg_conf_th=seg_conf_th,
+                            divide=divide, train_txt_path=train_txt_path, test_txt_path=test_txt_path,
+                            train_scenes=train_scenes, vali_scenes=vali_scenes, test_scenes=test_scenes,
+                            train_ratio=train_ratio, vali_ratio=vali_ratio, test_ratio=test_ratio, data_shuffle=data_shuffle,
+                            task_name=task_name
+                            )
+
+        dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers,
+                                pin_memory=pin_memory)
     else:
         raise ValueError("Do Not Exist This Value: {}".format(task_name))
 
-
     return dataset, dataloader
+
 
 
 

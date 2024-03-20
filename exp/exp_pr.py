@@ -14,9 +14,9 @@ from utils.logging import save_args, save_model, save_results, save_gradients, s
 from utils.result import compute_result
 
 
-class ExpRec(ExpBasic):
+class ExpPR(ExpBasic):
     def __init__(self, args):
-        super(ExpRec, self).__init__(args)
+        super(ExpPR, self).__init__(args)
 
     def _build_model(self):
         model = self.model_dict[self.args.model].Model(self.args).float()
@@ -81,9 +81,14 @@ class ExpRec(ExpBasic):
             for i, (batch_rec_x, batch_rec_y, batch_pre_x, batch_pre_y) in enumerate(dataloader):
                 batch_rec_x = batch_rec_x.float().to(self.device)
                 batch_rec_y = batch_rec_y.float().to(self.device)
+                batch_pre_x = batch_pre_x.float().to(self.device)
+                batch_pre_y = batch_pre_y.float().to(self.device)
 
                 # (N, C, L, V)-->(N, C, L, V)
-                outputs = self.model(batch_rec_x)
+                outputs_rec, _ = self.model(batch_pre_y)
+                _, outputs_pre = self.model(batch_pre_x)
+
+                outputs = 0.5 * outputs_rec + 0.5 * outputs_pre
 
                 preds = outputs.detach().cpu()
                 trues = batch_rec_y.detach().cpu()
@@ -146,15 +151,17 @@ class ExpRec(ExpBasic):
             for batch_id, (batch_rec_x, batch_rec_y, batch_pre_x, batch_pre_y) in enumerate(train_loader):
                 batch_rec_x = batch_rec_x.float().to(self.device)
                 batch_rec_y = batch_rec_y.float().to(self.device)
+                batch_pre_x = batch_pre_x.float().to(self.device)
+                batch_pre_y = batch_pre_y.float().to(self.device)
 
                 optimizer.zero_grad()
 
                 bt_start_time = time.time()
 
                 # (N, C, T, V)-->(N, C, T, V)
-                outputs = self.model(batch_rec_x)
+                outputs_rec, outputs_pre = self.model(batch_rec_x)
 
-                loss = criterion(outputs, batch_rec_y)
+                loss = 0.5 * criterion(outputs_rec, batch_rec_y) + 0.5 * criterion(outputs_pre, batch_pre_y)
 
                 train_loss.append(loss.item())
 

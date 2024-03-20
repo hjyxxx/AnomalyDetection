@@ -9,7 +9,7 @@ symm_range: True
 sub_mean: False
 seg_conf_th: 5.0
 transform: False
-divide: "random"
+divide: "file"
 train_txt_path: "configs/SH_Train.txt"
 test_txt_path: "configs/SH_Test.txt"
 train_ratio: 1.0

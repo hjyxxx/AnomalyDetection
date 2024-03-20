@@ -3,15 +3,17 @@ import os
 import torch
 from cprint import cprint
 
-from models.bases import Test, TCN
+from models import PureGraph
+from models.bases import TCN, Transformer
 
 
 class ExpBasic:
     def __init__(self, args):
         self.args = args
         self.model_dict = {
-            'test': Test,
-            'TCN': TCN
+            'TCN': TCN,
+            'Transformer': Transformer,
+            'PureGraph': PureGraph
 
         }
 

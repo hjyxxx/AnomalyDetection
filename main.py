@@ -1,9 +1,15 @@
 import argparse
 
+import torch.random
 from cprint import cprint
 
+from exp.exp_pr import ExpPR
+from exp.exp_pre import ExpPre
 from exp.exp_rec import ExpRec
-from utils.util import load_data_config
+from exp.exp_ws import ExpWS
+from utils.util import load_data_config, load_args
+
+torch.random.manual_seed(2024)
 
 if __name__ == '__main__':
 
@@ -11,20 +17,23 @@ if __name__ == '__main__':
 
     # 基础参数
     parser.add_argument('--is-training', type=bool, default=True, help='训练或者测试')
-    parser.add_argument('--task-name', type=str, default='rec', help='任务类型')
+    parser.add_argument('--task-name', type=str, default='ws', help='任务类型')
     parser.add_argument('--debug', type=bool, default=False, help="debug")
-    parser.add_argument('--model', type=str, default='TCN', help='模型名称')
+    parser.add_argument('--model', type=str, default='PureGraph', help='模型名称')
     parser.add_argument('--train-epochs', type=int, default=30, help='训练轮数')
     parser.add_argument('--use-gpu', type=bool, default=True, help='是否使用GPU')
     parser.add_argument('--gpu', type=int, default=0, help='使用第几个GPU')
 
     # 模型参数
-    parser.add_argument('--e-layers', type=int, default=3, help='')
+    parser.add_argument('--e-layers', type=int, default=6, help='')
     parser.add_argument('--in-features', type=int, default=2, help='输入维度')
     parser.add_argument('--out-features', type=int, default=2, help='输出维度')
-    parser.add_argument('--embedding-channels', type=int, default=16, help="嵌入维度")
-    parser.add_argument('--d-ff', type=int, default=32, help='')
-    parser.add_argument('--dropout', type=float, default=0.2, help='')
+    parser.add_argument('--embedding-channels', type=int, default=512, help="嵌入维度")
+    parser.add_argument('--d-ff', type=int, default=256, help='')
+    parser.add_argument('--patch_len', type=int, default=6, help="")
+    parser.add_argument('--stride', type=int, default=2, help="")
+    parser.add_argument('--padding', type=int, default=2, help="")
+    parser.add_argument('--dropout', type=float, default=0.0, help='')
 
     # 数据集参数
     parser.add_argument('--data', type=str, default='shtc', help='数据集名称')
@@ -48,6 +57,12 @@ if __name__ == '__main__':
 
     if args.task_name == 'rec':
         Exp = ExpRec
+    elif args.task_name == 'pre':
+        Exp = ExpPre
+    elif args.task_name == 'pr':
+        Exp = ExpPR
+    elif args.task_name == 'ws':
+        Exp = ExpWS
 
     else:
         raise ValueError("Do Not Exist This Value: {}".format(args.task_name))
@@ -57,9 +72,9 @@ if __name__ == '__main__':
         cprint.info(args)
         exp.train()
     else:
-        # folder_path = 'checkpoints/rec/GRU/asd/train/save2'
-        # args = load_args(folder_path)
-        # cprint.info(args.__str__())
-        # exp = Exp(args)
-        # exp.test(args, folder_path)
-        pass
+        folder_path = 'checkpoints/pre/PureGraph/shtc/train/save5'
+        args = load_args(folder_path)
+        cprint.info(args)
+        exp = Exp(args)
+        exp.test(folder_path)
+

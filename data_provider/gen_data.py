@@ -2,7 +2,9 @@ import json
 import os
 
 import numpy as np
+from matplotlib import pyplot as plt
 from tqdm import tqdm
+import seaborn as sns
 
 
 def gen_data(path, video_list, seg_len, seg_stride, vid_res, symm_range, sub_mean, normalize_flag, seg_conf_th):
@@ -211,6 +213,12 @@ def seg_conf_th_filter(seg_data_np, seg_meta, seg_conf_th):
     seg_len = seg_data_np.shape[2]
     conf_vals = seg_data_np[:, 2]       # (N, L, V)
     sum_confs = conf_vals.sum(axis=(1, 2)) / seg_len        # (N)
+
+    # sns.displot(sum_confs)
+    # sns.displot(sum_confs, kind='kde')
+    # sns.displot(sum_confs, kind='ecdf')
+
+    # plt.show()
 
     seg_data_filter = seg_data_np[sum_confs > seg_conf_th]
     seg_meta_filter = np.array(seg_meta)[sum_confs > seg_conf_th].tolist()

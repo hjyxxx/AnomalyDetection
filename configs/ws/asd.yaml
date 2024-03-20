@@ -1,21 +1,21 @@
-seg_len: 21
+seg_len: 12
 seg_stride: 1
-for_len: 21
+for_len: 12
 node_num: 18
-ckp: []
+ckp: [4, 10, 13]
 normalize_flag: 0
-vid_res: [856, 480]
+vid_res: [1920, 1080]
 symm_range: True
 sub_mean: False
-seg_conf_th: 5.0
+seg_conf_th: 0.0
 transform: False
 divide: "random"
 train_txt_path: "configs/SH_Train.txt"
 test_txt_path: "configs/SH_Test.txt"
-train_ratio: 1.0
-vali_ratio: 0.0
-test_ratio: 0.0
+train_ratio: 0.7
+vali_ratio: 0.1
+test_ratio: 0.2
 data_shuffle: False
-train_scenes: []
-vali_scenes: []
-test_scenes: []
+train_scenes: [1, 2]
+vali_scenes: [1, 2]
+test_scenes: [3]

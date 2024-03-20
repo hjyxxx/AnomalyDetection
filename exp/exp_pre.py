@@ -14,9 +14,9 @@ from utils.logging import save_args, save_model, save_results, save_gradients, s
 from utils.result import compute_result
 
 
-class ExpRec(ExpBasic):
+class ExpPre(ExpBasic):
     def __init__(self, args):
-        super(ExpRec, self).__init__(args)
+        super(ExpPre, self).__init__(args)
 
     def _build_model(self):
         model = self.model_dict[self.args.model].Model(self.args).float()
@@ -78,15 +78,15 @@ class ExpRec(ExpBasic):
         self.model.eval()
 
         with torch.no_grad():
-            for i, (batch_rec_x, batch_rec_y, batch_pre_x, batch_pre_y) in enumerate(dataloader):
-                batch_rec_x = batch_rec_x.float().to(self.device)
-                batch_rec_y = batch_rec_y.float().to(self.device)
+            for batch_rec_x, batch_rec_y, batch_pre_x, batch_pre_y in dataloader:
+                batch_pre_x = batch_pre_x.float().to(self.device)
+                batch_pre_y = batch_pre_y.float().to(self.device)
 
                 # (N, C, L, V)-->(N, C, L, V)
-                outputs = self.model(batch_rec_x)
+                outputs = self.model(batch_pre_x)
 
                 preds = outputs.detach().cpu()
-                trues = batch_rec_y.detach().cpu()
+                trues = batch_pre_y.detach().cpu()
 
                 loss = criterion(preds, trues)
 
@@ -143,18 +143,19 @@ class ExpRec(ExpBasic):
             train_loss = []     # 保存训练损失
             self.model.train()
             ep_start_time = time.time()
-            for batch_id, (batch_rec_x, batch_rec_y, batch_pre_x, batch_pre_y) in enumerate(train_loader):
-                batch_rec_x = batch_rec_x.float().to(self.device)
-                batch_rec_y = batch_rec_y.float().to(self.device)
+            batch_id = 1
+            for batch_rec_x, batch_rec_y, batch_pre_x, batch_pre_y in train_loader:
+                batch_pre_x = batch_pre_x.float().to(self.device)
+                batch_pre_y = batch_pre_y.float().to(self.device)
 
                 optimizer.zero_grad()
 
                 bt_start_time = time.time()
 
                 # (N, C, T, V)-->(N, C, T, V)
-                outputs = self.model(batch_rec_x)
+                outputs = self.model(batch_pre_x)
 
-                loss = criterion(outputs, batch_rec_y)
+                loss = criterion(outputs, batch_pre_y)
 
                 train_loss.append(loss.item())
 
@@ -169,6 +170,7 @@ class ExpRec(ExpBasic):
 
                 writer.add_scalar('Loss/Train', loss.item(), iter)
                 iter += 1
+                batch_id += 1
 
             scheduler.step()
 
@@ -239,24 +241,24 @@ class ExpRec(ExpBasic):
 
         with torch.no_grad():
             for i, (batch_rec_x, batch_rec_y, batch_pre_x, batch_pre_y) in enumerate(train_loader):
-                batch_rec_x = batch_rec_x.float().to(self.device)
-                batch_rec_y = batch_rec_y.float().to(self.device)
-                outputs = self.model(batch_rec_x)
+                batch_pre_x = batch_pre_x.float().to(self.device)
+                batch_pre_y = batch_pre_y.float().to(self.device)
+                outputs = self.model(batch_pre_x)
 
                 preds = outputs.detach().cpu().numpy()
-                trues = batch_rec_y.detach().cpu().numpy()
+                trues = batch_pre_y.detach().cpu().numpy()
 
                 train_total_preds.append(preds)
                 train_total_trues.append(trues)
 
         with torch.no_grad():
-            for i, (batch_rec_x, batch_rec_y, _, _) in enumerate(test_loader):
-                batch_rec_x = batch_rec_x.float().to(self.device)
-                batch_rec_y = batch_rec_y.float().to(self.device)
-                outputs = self.model(batch_rec_x)
+            for i, (batch_rec_x, batch_rec_y, batch_pre_x, batch_pre_y) in enumerate(test_loader):
+                batch_pre_x = batch_pre_x.float().to(self.device)
+                batch_pre_y = batch_pre_y.float().to(self.device)
+                outputs = self.model(batch_pre_x)
 
                 preds = outputs.detach().cpu().numpy()
-                trues = batch_rec_y.detach().cpu().numpy()
+                trues = batch_pre_y.detach().cpu().numpy()
 
                 test_total_preds.append(preds)
                 test_total_trues.append(trues)

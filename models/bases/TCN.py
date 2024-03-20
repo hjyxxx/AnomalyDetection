@@ -1,3 +1,4 @@
+import numpy as np
 from torch import nn
 
 from models.components.embedding import ConvEmbedding
@@ -78,6 +79,8 @@ class Model(nn.Module):
 
         e_layers = configs.e_layers
 
+        seg_len = configs.seg_len
+
         in_features = configs.in_features
         out_features = configs.out_features
         embedding_channels = configs.embedding_channels
@@ -87,10 +90,17 @@ class Model(nn.Module):
         node_num = configs.node_num
 
         self.embedding = ConvEmbedding(in_channels=in_features * node_num, embedding_channels=embedding_channels * node_num)
+        # self.embedding = Embedding(
+        #     embedding_layers=[
+        #         ConvEmbedding(in_channels=in_features * node_num, embedding_channels=embedding_channels * node_num)
+        #     ],
+        #     dropout=dropout
+        # )
 
         num_inputs = embedding_channels * node_num
         num_channels = [embedding_channels * node_num, d_ff * node_num, d_ff * node_num, embedding_channels * node_num]
         num_outputs = out_features * node_num
+
 
         self.encoder = TemporalConvNet(num_inputs=num_inputs, num_channels=num_channels, dropout=dropout)
 
@@ -103,14 +113,14 @@ class Model(nn.Module):
     def emb(self, x):
         """
         :param x: (B, T, VC)
-        :return:
+        :return: (N, S, embedding_channels)
         """
         y = self.embedding(x)
         return y
 
     def encode(self, x):
         """
-        :param x: (B, T, VC)
+        :param x: (N, S, embedding_channels)
         :return:
         """
         y = self.encoder(x.permute(0, 2, 1)).permute(0, 2, 1)
@@ -118,7 +128,7 @@ class Model(nn.Module):
 
     def decode(self, x):
         """
-        :param x: (B, T, VC)
+        :param x: (N, S, embedding_channels)
         :return:
         """
         y = self.decoder(x)

@@ -87,7 +87,7 @@ class DynamicAttention(nn.Module):
 
 
 class FullAttention(nn.Module):
-    def __init__(self, mask_flag, dropout=0.1):
+    def __init__(self, mask_flag=False, dropout=0.1):
         super(FullAttention, self).__init__()
 
         self.mask_flag = mask_flag
