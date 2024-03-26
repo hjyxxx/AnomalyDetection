@@ -124,10 +124,8 @@ class ExpRec(ExpBasic):
         scheduler = self._get_scheduler(optimizer)
         criterion = self._get_criterion()
 
-        # 创建文件夹
-        folder_path = self._create_folder()
-
         # 记录日志
+        folder_path = self.args.folder_path
         save_args(folder_path, self.args)               # 保存参数
         save_model(folder_path, str(self.model))        # 保存模型结构
         writer = SummaryWriter(log_dir=folder_path + '/tensorboard/')
@@ -212,7 +210,7 @@ class ExpRec(ExpBasic):
                 cprint.warn('Early Stopping')
                 break
 
-    def test(self, folder_path):
+    def test(self):
         """
         测试
         :param folder_path:
@@ -221,6 +219,7 @@ class ExpRec(ExpBasic):
         train_dataset, train_loader = self._get_data(flag='train')
         test_dataset, test_loader = self._get_data(flag='test')
 
+        folder_path = self.args.folder_path
         self.model.load_state_dict(torch.load(os.path.join(folder_path, 'weights', 'model.pth')))
         folder_path = folder_path.replace('/', '_')
 

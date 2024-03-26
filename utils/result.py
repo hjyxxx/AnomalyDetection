@@ -64,9 +64,15 @@ def compute_result(preds, trues, metas, label_dict):
             video_scores = np.amax(video_person_scores, axis=0)
 
             # 平滑分数
-            video_scores = smooth(video_scores, 5)
+            video_scores = smooth(video_scores, 40)
             # 最大最小归一化
-            video_scores = min_max(video_scores)
+            # video_scores = min_max(video_scores)
+
+            mean = video_scores.mean()
+            std = video_scores.std()
+            video_scores = (video_scores - mean) / std
+            #
+            # video_scores = smooth(video_scores, 20)
 
             scene_scores.append(video_scores)
             scene_labels.append(video_label)
@@ -74,11 +80,22 @@ def compute_result(preds, trues, metas, label_dict):
         scene_scores = np.concatenate(scene_scores)
         scene_labels = np.concatenate(scene_labels)
 
+        # scene_scores = min_max(scene_scores)
+
+        # mean = scene_scores.mean()
+        # std = scene_scores.std()
+        # scene_scores = (scene_scores - mean) / std
+
         scores.append(scene_scores)
         labels.append(scene_labels)
 
     scores = np.concatenate(scores)
     labels = np.concatenate(labels)
+
+    mean = scores.mean()
+    std = scores.std()
+    scores = (scores - mean) / std
+    # scores = min_max(scores)
 
     fpr, tpr, roc_auc = cal_roc_auc(scores, labels)
     _, _, pr_auc = cal_pr_auc(scores, labels)
@@ -119,7 +136,7 @@ def smooth(y, n):
     :return:
     """
 
-    y_smooth = gaussian_filter1d(y, sigma=40)
+    y_smooth = gaussian_filter1d(y, sigma=n)
 
     # win = np.ones(n) / n
     # y = np.array([y[0]] * (n // 2) + y.tolist() + [y[-1]] * (n // 2))

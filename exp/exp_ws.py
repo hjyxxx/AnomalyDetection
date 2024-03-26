@@ -126,10 +126,8 @@ class ExpWS(ExpBasic):
         scheduler = self._get_scheduler(optimizer)
         criterion = self._get_criterion()
 
-        # 创建文件夹
-        folder_path = self._create_folder()
-
         # 记录日志
+        folder_path = self.args.folder_path
         save_args(folder_path, self.args)               # 保存参数
         save_model(folder_path, str(self.model))        # 保存模型结构
         writer = SummaryWriter(log_dir=folder_path + '/tensorboard/')
@@ -175,6 +173,10 @@ class ExpWS(ExpBasic):
             cprint.info("| Epoch {} end train | ms/epoch {:5.2f} | loss {:5.8f} |".format(epoch, ep_elapsed, np.mean(pre_train_loss)))
             cprint.info("=" * 90)
         cprint.info("**********************end pre_train**********************")
+
+        # 生成初始化伪标签
+        _, _, _, train_scores = self.vali(dataset=train_dataset, dataloader=train_loader, criterion=criterion)
+        train_dataset.reset_seg_label(train_scores)
 
         # 弱监督训练
         cprint.info("**********************start train**********************")

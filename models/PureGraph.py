@@ -67,9 +67,9 @@ class Model(nn.Module):
         d_ff = configs.d_ff
         dropout = configs.dropout
 
+        fusion = configs.fusion
+
         self.node_num = configs.node_num
-
-
 
         # graph = Graph(layout='openpose', strategy='pure', seg_len=seg_len)
         #
@@ -84,13 +84,10 @@ class Model(nn.Module):
         adj = torch.ones((patch_num * self.node_num, patch_num * self.node_num))
 
         # self.embedding = PatchEmbedding(in_channels=in_features, embedding_channels=embedding_channels,
-        #                                 patch_len=patch_len, stride=stride, padding=stride)
+        #                                 patch_len=patch_len, stride=stride, padding=padding)
 
-        self.embedding = PatchEmbedding(in_channels=in_features, embedding_channels=embedding_channels,
-                                        patch_len=patch_len, stride=stride, padding=stride)
-
-        # self.embedding = TFWEmbedding(in_channels=in_features, embedding_channels=embedding_channels,
-        #                               patch_len=patch_len, stride=stride, padding=stride)
+        self.embedding = TFWEmbedding(in_channels=in_features, embedding_channels=embedding_channels,
+                                      patch_len=patch_len, stride=stride, padding=padding, mode=fusion)
 
         self.encoder = Encoder(
             encoder_layers=[

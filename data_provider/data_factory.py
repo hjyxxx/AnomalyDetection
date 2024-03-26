@@ -1,10 +1,13 @@
 import os
 
+import dill
+from cprint import cprint
 from torch.utils.data import DataLoader
 
 from data_provider.data_utils import ae_trans_list
 from datasets.dataset_pr import DatasetPR
 from datasets.dataset_ws import DatasetWS
+from utils.logging import save_data
 
 
 def data_provider(args, flag):
@@ -13,8 +16,10 @@ def data_provider(args, flag):
     :param flag:
     :return:
     """
+
     # Base
     task_name = args.task_name      # 任务
+    is_training = args.is_training
     debug = args.debug              # Debug
 
     # DataLoader
@@ -50,6 +55,37 @@ def data_provider(args, flag):
     vali_scenes = args.vali_scenes
     test_scenes = args.test_scenes
 
+    folder_path = args.folder_path
+    cash_path = args.cash_path
+    cash_flag = args.cash_flag
+
+    if not is_training:
+        cprint.info("Loading data cash")
+        dataset_path = os.path.join(args.folder_path, f'{flag}_dataset.pkl')
+        dataloader_path = os.path.join(args.folder_path, f'{flag}_dataloader.pkl')
+        with open(dataset_path, 'rb') as f:
+            dataset = dill.load(f)
+        with open(dataloader_path, 'rb') as f:
+            dataloader = dill.load(f)
+
+        return dataset, dataloader
+
+    if cash_flag and not debug:
+        cprint.info("Loading data cash")
+        dataset_path = os.path.join(cash_path, f'{flag}_dataset_cash.pkl')
+        dataloader_path = os.path.join(cash_path, f'{flag}_dataloader_cash.pkl')
+        with open(dataset_path, 'rb') as f:
+            dataset = dill.load(f)
+        with open(dataloader_path, 'rb') as f:
+            dataloader = dill.load(f)
+
+        # 保存至新的日志文件夹
+        dataset_path = os.path.join(folder_path, f'{flag}_dataset.pkl')
+        dataloader_path = os.path.join(folder_path, f'{flag}_dataloader.pkl')
+        save_data(dataset_path, dataset)
+        save_data(dataloader_path, dataloader)
+
+        return dataset, dataloader
 
     if flag in ['test', 'vali']:
         shuffle = False
@@ -115,6 +151,19 @@ def data_provider(args, flag):
                                 pin_memory=pin_memory)
     else:
         raise ValueError("Do Not Exist This Value: {}".format(task_name))
+
+    if not debug:
+        # 保存dataset与dataloader至总cash
+        dataset_path = os.path.join(cash_path, f'{flag}_dataset_cash.pkl')
+        dataloader_path = os.path.join(cash_path, f'{flag}_dataloader_cash.pkl')
+        save_data(dataset_path, dataset)
+        save_data(dataloader_path, dataloader)
+
+        # 保存至日志文件夹
+        dataset_path = os.path.join(folder_path, f'{flag}_dataset.pkl')
+        dataloader_path = os.path.join(folder_path, f'{flag}_dataloader.pkl')
+        save_data(dataset_path, dataset)
+        save_data(dataloader_path, dataloader)
 
     return dataset, dataloader
 

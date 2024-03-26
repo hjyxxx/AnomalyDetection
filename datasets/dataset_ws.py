@@ -208,7 +208,7 @@ class DatasetWS(DatasetBase):
         self.seg_label = np.zeros(shape=(len(self.seg_data_np), 1))
 
     def reset_seg_label(self, score):
-        threshold = np.percentile(score, 70)
+        threshold = np.percentile(score, 75)
 
         res = np.where(score > threshold, 1, 0)
 

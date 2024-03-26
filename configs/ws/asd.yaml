@@ -12,10 +12,10 @@ transform: False
 divide: "random"
 train_txt_path: "configs/SH_Train.txt"
 test_txt_path: "configs/SH_Test.txt"
-train_ratio: 0.7
-vali_ratio: 0.1
-test_ratio: 0.2
+train_ratio: 0.5
+vali_ratio: 0.0
+test_ratio: 0.5
 data_shuffle: False
 train_scenes: [1, 2]
 vali_scenes: [1, 2]
-test_scenes: [3]
+test_scenes: [1, 2]

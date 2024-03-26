@@ -1,4 +1,4 @@
-seg_len: 12
+seg_len: 30
 seg_stride: 1
 for_len: 12
 node_num: 18
@@ -18,4 +18,4 @@ test_ratio: 0.2
 data_shuffle: False
 train_scenes: [1, 2]
 vali_scenes: [1, 2]
-test_scenes: [3]
+test_scenes: [1, 2]

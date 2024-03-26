@@ -5,7 +5,7 @@ import pywt
 import torch.fft
 from matplotlib import pyplot as plt
 
-from utils.result import get_scores, smooth, min_max
+from utils.result import get_scores, smooth, min_max, compute_result
 
 
 def test_video(preds, trues, metas, label_dict, video_name):
@@ -65,7 +65,7 @@ def test_video(preds, trues, metas, label_dict, video_name):
 
 if __name__ == '__main__':
 
-    folder_path = 'checkpoints/pre/PureGraph/shtc/train/save5'
+    folder_path = 'checkpoints/rec/PureGraph/asd/train/save1'
     results_folder_path = os.path.join('test_results', folder_path.replace('/', '_'))
 
     train_trues = np.load(os.path.join(results_folder_path, 'train_trues.npy'), allow_pickle=True)
@@ -81,6 +81,9 @@ if __name__ == '__main__':
     test_label_dict = np.load(os.path.join(results_folder_path, 'test_label_dict.npy'), allow_pickle=True).item()
     train_label_dict = np.load(os.path.join(results_folder_path, 'train_label_dict.npy'), allow_pickle=True).item()
 
+    results, _, _ = compute_result(test_preds, test_trues, test_metas, test_label_dict)
+    print(results)
+
     # test_video(train_preds, train_trues, train_metas, train_label_dict, video_name='01_015')
-    test_video(test_preds, test_trues, test_metas, test_label_dict, video_name='01_0014')
+    # test_video(test_preds, test_trues, test_metas, test_label_dict, video_name='01_0014')
 

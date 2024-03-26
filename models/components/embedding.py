@@ -117,7 +117,7 @@ class PatchEmbedding(nn.Module):
         # (B, C, patch, V, patch_len)-->(B, V, patch, patch_len, C)
         x = x.permute(0, 3, 2, 4, 1).contiguous()
 
-        # (B, V, patch, patch_len, C)-->(B, V, patch, patch_len, C)
+        # (B, V, patch, patch_len, C)-->(B, V, patch, patch_len*C)
         x = x.reshape(x.shape[0], x.shape[1], x.shape[2], -1)
 
         # (B, V, patch, patch_len, C)-->(B, V, patch, embedding_channels)
@@ -130,17 +130,47 @@ class PatchEmbedding(nn.Module):
 
 
 class TFWEmbedding(nn.Module):
-    def __init__(self, in_channels, embedding_channels, patch_len, stride, padding):
+    def __init__(self, in_channels, embedding_channels, patch_len, stride, padding, mode='t'):
         super(TFWEmbedding, self).__init__()
 
         self.patch_len = patch_len
         self.stride = stride
+        self.mode = mode
 
         self.padding_patch_layer = nn.ReplicationPad2d((0, 0, 0, padding))
 
-        self.f_linear = nn.Linear(in_features=in_channels * (int(patch_len / 2) + 1) * 2, out_features=embedding_channels)
+        if mode == 't':
+            self.linear_t = nn.Linear(in_features=patch_len * in_channels, out_features=embedding_channels, bias=False)
+        elif mode == 'f':
+            self.linear_f = nn.Linear(in_features=in_channels * (int(patch_len / 2) + 1) * 2,
+                                      out_features=embedding_channels, bias=False)
+        elif mode == 'w':
+            pass
 
-    def frequency(self, x):
+        elif mode == 'tf':
+            self.linear_t = nn.Linear(in_features=patch_len * in_channels, out_features=embedding_channels, bias=False)
+            self.linear_f = nn.Linear(in_features=in_channels * (int(patch_len / 2) + 1) * 2,
+                                      out_features=embedding_channels, bias=False)
+            self.linear_c = nn.Linear(in_features=2 * embedding_channels, out_features=embedding_channels, bias=False)
+
+        else:
+            raise ValueError("Do Not Exists This mode: {}".format(mode))
+
+    def time_domain(self, x):
+        """
+        :param x: (B, V, patch, patch_len, C)
+        :return: (B, V, patch, embedding_channels)
+        """
+
+        # (B, V, patch, patch_len, C)-->(B, V, patch, patch_len*C)
+        x = x.reshape(x.shape[0], x.shape[1], x.shape[2], -1)
+
+        # (B, V, patch, patch_len, C)-->(B, V, patch, embedding_channels)
+        x = self.linear_t(x)
+
+        return x
+
+    def frequency_domain(self, x):
         """
         提取频域特征
         :param x: (B, V, patch, patch_len, C)
@@ -159,7 +189,7 @@ class TFWEmbedding(nn.Module):
         # (B, V, patch, patch_len/2*C)-->(B, V, patch, patch_len/2*C*2)
         x_Fre = torch.cat([x_real, x_imag], dim=-1)
 
-        x_Fre = self.f_linear(x_Fre)
+        x_Fre = self.linear_f(x_Fre)
 
         return x_Fre
 
@@ -177,7 +207,100 @@ class TFWEmbedding(nn.Module):
         # (B, C, patch, V, patch_len)->(B, V, patch, patch_len, C)
         x = x.permute(0, 3, 2, 4, 1).contiguous()
 
-        x_emb = self.frequency(x)
+        if self.mode == 't':
+            x_emb = self.time_domain(x)
+        elif self.mode == 'f':
+            x_emb = self.frequency_domain(x)
+        elif self.mode == 'tf':
+            x_t = self.time_domain(x)
+            x_f = self.frequency_domain(x)
+            x_emb = torch.concat([x_t, x_f], dim=-1)
+            x_emb = self.linear_c(x_emb)
+        else:
+            raise ValueError("Do Not Exists This mode: {}".format(self.mode))
+
+        x_emb = x_emb.reshape(x_emb.shape[0], -1, x_emb.shape[-1])
+
+        return x_emb
+
+
+class TimeEmbedding(nn.Module):
+    def __init__(self, in_channels, embedding_channels, patch_len, stride, padding):
+        super(TimeEmbedding, self).__init__()
+
+        self.patch_len = patch_len
+        self.stride = stride
+
+        self.padding_patch_layer = nn.ReplicationPad2d((0, 0, 0, padding))
+
+        self.linear = nn.Linear(in_features=patch_len * in_channels, out_features=embedding_channels, bias=False)
+
+    def forward(self, x):
+        """
+        :param x: (B, C, T, V)
+        :return: (B, V*patch, embedding_channels)
+        """
+
+        # (B, C, T, V)-->(B, C, T+padding, V)
+        x = self.padding_patch_layer(x)
+
+        # (B, C, T+padding, V)-->(B, C, patch, V, patch_len)
+        x = x.unfold(dimension=-2, size=self.patch_len, step=self.stride)
+
+        # (B, C, patch, V, patch_len)-->(B, V, patch, patch_len, C)
+        x = x.permute(0, 3, 2, 4, 1).contiguous()
+
+        # (B, V, patch, patch_len, C)-->(B, V, patch, patch_len*C)
+        x = x.reshape(x.shape[0], x.shape[1], x.shape[2], -1)
+
+        # (B, V, patch, patch_len, C)-->(B, V, patch, embedding_channels)
+        x = self.linear(x)
+
+        # (B, V, patch, embedding_channels)-->(B, V*patch, embedding_channels)
+        x = x.reshape(x.shape[0], -1, x.shape[-1])
+
+        return x
+
+
+class FreEmbedding(nn.Module):
+    def __init__(self, in_channels, embedding_channels, patch_len, stride, padding):
+        super(FreEmbedding, self).__init__()
+
+        self.patch_len = patch_len
+        self.stride = stride
+
+        self.padding_patch_layer = nn.ReplicationPad2d((0, 0, 0, padding))
+
+        self.linear = nn.Linear(in_features=in_channels * (int(patch_len / 2) + 1) * 2,
+                                out_features=embedding_channels, bias=False)
+
+    def forward(self, x):
+        """
+        :param x: (B, C, T, V)
+        :return:
+        """
+        # (B, C, T, V)-->(B, C, T+padding, V)
+        x = self.padding_patch_layer(x)
+        # (B, C, T+padding, V)-->(B, C, patch, patch_len, V)
+        x = x.unfold(dimension=2, size=self.patch_len, step=self.stride)
+
+        # (B, C, patch, V, patch_len)->(B, V, patch, patch_len, C)
+        x = x.permute(0, 3, 2, 4, 1).contiguous()
+
+        x = torch.fft.rfft(x, dim=-2, norm='ortho')        # FFT on patch_len
+        # (B, V, patch, patch_len/2, C)
+        x_real = x.real
+        # (B, V, patch, patch_len/2, C)
+        x_imag = x.imag
+
+        # (B, V, patch, patch_len/2, C)-->(B, V, patch, patch_len/2*C)
+        x_real = x_real.reshape(x_real.shape[0], x_real.shape[1], x_real.shape[2], -1)
+        x_imag = x_imag.reshape(x_imag.shape[0], x_imag.shape[1], x_imag.shape[2], -1)
+
+        # (B, V, patch, patch_len/2*C)-->(B, V, patch, patch_len/2*C*2)
+        x_emb = torch.cat([x_real, x_imag], dim=-1)
+
+        x_emb = self.linear(x_emb)
 
         x_emb = x_emb.reshape(x_emb.shape[0], -1, x_emb.shape[-1])
 

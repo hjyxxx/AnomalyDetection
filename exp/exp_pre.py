@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 from data_provider.data_factory import data_provider
 from exp.exp_basic import ExpBasic
 from utils.early_stopping import EarlyStopping
-from utils.logging import save_args, save_model, save_results, save_gradients, save_parameters
+from utils.logging import save_args, save_model, save_results, save_gradients, save_parameters, save_data
 from utils.result import compute_result
 
 
@@ -124,10 +124,8 @@ class ExpPre(ExpBasic):
         scheduler = self._get_scheduler(optimizer)
         criterion = self._get_criterion()
 
-        # 创建文件夹
-        folder_path = self._create_folder()
-
         # 记录日志
+        folder_path = self.args.folder_path
         save_args(folder_path, self.args)               # 保存参数
         save_model(folder_path, str(self.model))        # 保存模型结构
         writer = SummaryWriter(log_dir=folder_path + '/tensorboard/')
@@ -214,12 +212,15 @@ class ExpPre(ExpBasic):
                 cprint.warn('Early Stopping')
                 break
 
-    def test(self, folder_path):
+    def test(self):
         """
         测试
         :param folder_path:
         :return:
         """
+
+        folder_path = self.args.folder_path
+
         train_dataset, train_loader = self._get_data(flag='train')
         test_dataset, test_loader = self._get_data(flag='test')
 

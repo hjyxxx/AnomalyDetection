@@ -1,8 +1,43 @@
 import json
 import os
 
+import dill
 import torch
 from cprint import cprint
+
+
+def create_folder(args):
+    """
+    创建保存的文件夹
+    :param flag:
+    :return:
+    """
+    path = os.path.join(args.checkpoints, args.task_name, args.model, args.data, 'train')
+    if not os.path.exists(path):
+        save_path = os.path.join(path, 'save0')
+        os.makedirs(save_path)
+    else:
+        save_folders = os.listdir(path)
+
+        if not save_folders:
+            save_path = os.path.join(path, 'save0')
+            os.makedirs(save_path)
+        else:
+            sorted_folders = sorted(save_folders, key=lambda x: int(x[4:]))
+            last_folder = sorted_folders[-1]
+
+            last_folder_path = os.path.join(path, last_folder)
+            last_num = int(last_folder[4:])
+            # 空文件夹
+            if not os.path.getsize(last_folder_path):
+                save_path = last_folder_path
+            else:
+                name = "save" + str(last_num + 1)
+                save_path = os.path.join(path, name)
+                os.makedirs(save_path)
+    cprint.info('logging: {}'.format(save_path))
+
+    return save_path
 
 
 def save_args(folder_path, args):
@@ -93,6 +128,17 @@ def save_parameters(model, epoch=0, writer=None):
     if writer is not None:
         for name, param in model.named_parameters():
             writer.add_histogram(name, param, global_step=epoch)
+
+
+def save_data(path, data):
+    """
+
+    :param path:
+    :param data:
+    :return:
+    """
+    with open(path, 'wb') as f:
+        dill.dump(data, f)
 
 
 
