@@ -96,7 +96,8 @@ class Model(nn.Module):
         :return:
         """
 
-        y = self.conv_embedding(x) + self.position_embedding(x)
+        x = self.conv_embedding(x)
+        y = self.position_embedding(x)
 
         return y
 

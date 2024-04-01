@@ -21,6 +21,11 @@ def compute_result(preds, trues, metas, label_dict):
     labels = []     # 保存标签
     scores = []     # 保存分数
 
+    ####
+    l = []
+    s = []
+    ####
+
     # 遍历每个场景
     for scene_id in scene_dict.keys():
         scene_scores = []       # 保存场景的分数
@@ -64,7 +69,7 @@ def compute_result(preds, trues, metas, label_dict):
             video_scores = np.amax(video_person_scores, axis=0)
 
             # 平滑分数
-            video_scores = smooth(video_scores, 40)
+            # video_scores = smooth(video_scores, 40)
             # 最大最小归一化
             # video_scores = min_max(video_scores)
 
@@ -72,10 +77,16 @@ def compute_result(preds, trues, metas, label_dict):
             std = video_scores.std()
             video_scores = (video_scores - mean) / std
             #
-            # video_scores = smooth(video_scores, 20)
+            video_scores = smooth(video_scores, 30)
 
             scene_scores.append(video_scores)
             scene_labels.append(video_label)
+
+            ####
+            s.append(mean)
+            l.append(1 if 1 in video_label else 0)
+            ####
+
 
         scene_scores = np.concatenate(scene_scores)
         scene_labels = np.concatenate(scene_labels)
@@ -92,14 +103,20 @@ def compute_result(preds, trues, metas, label_dict):
     scores = np.concatenate(scores)
     labels = np.concatenate(labels)
 
-    mean = scores.mean()
-    std = scores.std()
-    scores = (scores - mean) / std
+    # mean = scores.mean()
+    # std = scores.std()
+    # scores = (scores - mean) / std
     # scores = min_max(scores)
 
     fpr, tpr, roc_auc = cal_roc_auc(scores, labels)
     _, _, pr_auc = cal_pr_auc(scores, labels)
     acc, f1, precision, recall = cal_f1_acc(scores, labels)
+
+    ####
+    s = np.array(s)
+    l = np.array(l)
+    _, _, auc_video = cal_roc_auc(s, l)
+    ####
 
     results = {
         "fpr": fpr,
@@ -109,7 +126,8 @@ def compute_result(preds, trues, metas, label_dict):
         "F1": f1,
         "ACC": acc,
         "precision": precision,
-        "recall": recall
+        "recall": recall,
+        "AUC@Video": auc_video
     }
 
     return results, scores, labels

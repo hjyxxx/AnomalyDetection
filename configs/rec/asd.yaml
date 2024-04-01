@@ -1,6 +1,6 @@
-seg_len: 30
+seg_len: 12
 seg_stride: 1
-for_len: 12
+for_len: 0
 node_num: 18
 ckp: [4, 10, 13]
 normalize_flag: 0

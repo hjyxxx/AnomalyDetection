@@ -47,7 +47,7 @@ class EncoderLayer(nn.Module):
         # y = self.dropout(self.activate(self.conv1(y.transpose(-1, 1))))
         # y = self.dropout(self.conv2(y).transpose(-1, 1))
 
-        return y
+        return y + x
 
 
 class Model(nn.Module):
@@ -83,11 +83,13 @@ class Model(nn.Module):
 
         adj = torch.ones((patch_num * self.node_num, patch_num * self.node_num))
 
-        # self.embedding = PatchEmbedding(in_channels=in_features, embedding_channels=embedding_channels,
-        #                                 patch_len=patch_len, stride=stride, padding=padding)
+        self.embedding = PatchEmbedding(in_channels=in_features, embedding_channels=embedding_channels,
+                                        patch_len=patch_len, stride=stride, padding=padding)
 
-        self.embedding = TFWEmbedding(in_channels=in_features, embedding_channels=embedding_channels,
-                                      patch_len=patch_len, stride=stride, padding=padding, mode=fusion)
+        # self.embedding = TFWEmbedding(in_channels=in_features, embedding_channels=embedding_channels,
+        #                               patch_len=patch_len, stride=stride, padding=padding, mode=fusion)
+
+        # self.embedding = LinearEmbedding(in_channels=in_features, embedding_channels=embedding_channels)
 
         self.encoder = Encoder(
             encoder_layers=[

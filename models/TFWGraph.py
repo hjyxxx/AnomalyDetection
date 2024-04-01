@@ -116,7 +116,7 @@ class Model(nn.Module):
 
         e_layers = configs.e_layers
 
-        fusion_layer = 2
+        fusion_layer = 3
 
         assert fusion_layer <= e_layers
 
@@ -199,7 +199,7 @@ class Model(nn.Module):
         :param x: (B, C, T, V)
         :return:
         """
-        emb =self.time_embedding(x)
+        emb = self.time_embedding(x)
         y = self.time_encoder(emb)
 
         return y

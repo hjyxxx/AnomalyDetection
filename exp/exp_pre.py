@@ -23,6 +23,7 @@ class ExpPre(ExpBasic):
         for param in model.parameters():
             if len(param.shape) > 1:
                 nn.init.xavier_uniform_(param)
+                # nn.init.kaiming_uniform_(param)
             else:
                 nn.init.zeros_(param)
 
@@ -225,7 +226,7 @@ class ExpPre(ExpBasic):
         test_dataset, test_loader = self._get_data(flag='test')
 
         self.model.load_state_dict(torch.load(os.path.join(folder_path, 'weights', 'model.pth')))
-        folder_path = folder_path.replace('/', '_')
+        folder_path = folder_path.replace('\\', '_')
 
         # 创建文件夹
         folder_path = './test_results/' + folder_path + "/"
