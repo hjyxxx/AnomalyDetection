@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from models.components.embedding import TFWEmbedding, PatchEmbedding, TimeEmbedding, FreEmbedding
+from models.components.embedding import PatchEmbedding, TimeEmbedding, FreEmbedding
 from models.components.gcn import ChebyshevConv
 
 
@@ -132,22 +132,22 @@ class Model(nn.Module):
         dropout = configs.dropout
 
         patch_len = configs.patch_len
-        stride = configs.stride
-        padding = configs.padding
+        patch_stride = configs.patch_stride
+        patch_padding = configs.patch_padding
 
         fusion = configs.fusion
 
-        self.node_num = configs.node_num
+        self.pose_num = configs.pose_num
 
         self.time_embedding = TimeEmbedding(in_channels=in_features, embedding_channels=embedding_channels,
-                                            patch_len=patch_len, stride=stride, padding=padding)
+                                            patch_len=patch_len, patch_stride=patch_stride, patch_padding=patch_padding)
 
         self.fre_embedding = FreEmbedding(in_channels=in_features, embedding_channels=embedding_channels,
-                                          patch_len=patch_len, stride=stride, padding=padding)
+                                          patch_len=patch_len, patch_stride=patch_stride, patch_padding=patch_padding)
 
-        patch_num = int(np.floor((seg_len + padding - patch_len) / stride) + 1)
+        patch_num = int(np.floor((seg_len + patch_padding - patch_len) / patch_stride) + 1)
 
-        adj = torch.ones((patch_num * self.node_num, patch_num * self.node_num))
+        adj = torch.ones((patch_num * self.pose_num, patch_num * self.pose_num))
 
         self.time_encoder = Encoder(
             encoder_layers=[
@@ -230,7 +230,7 @@ class Model(nn.Module):
 
         res = (time + fre) * 0.5
 
-        res = res.reshape(res.shape[0], self.node_num, -1, res.shape[-1])
+        res = res.reshape(res.shape[0], self.pose_num, -1, res.shape[-1])
 
         res = self.decoder(res)
 

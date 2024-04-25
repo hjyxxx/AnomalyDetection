@@ -2,6 +2,8 @@ import json
 import os
 
 import numpy as np
+import pandas as pd
+import pandas
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 import seaborn as sns
@@ -9,7 +11,7 @@ import seaborn as sns
 
 def gen_data(path, video_list, seg_len, seg_stride, vid_res, symm_range, sub_mean, normalize_flag, seg_conf_th):
     """
-    :param path: {data}/{datatype}/
+    :param path: data/{data}/{datatype}/
     :param video_list: [normal/01_001_alphapose_tracked_person.json]
     :param seg_len: 步长
     :param seg_stride: 步距
@@ -22,7 +24,9 @@ def gen_data(path, video_list, seg_len, seg_stride, vid_res, symm_range, sub_mea
     """
     seg_data_np = []            # 保存滑窗后的数据
     seg_metas = []              # 保存滑窗后的信息, [[scene_id, video_id, person_id, [frames]]]
-
+    center_point = np.array([260, 170])      # 源域中心点
+    rescale_factory = np.array([1.04, 1.125])    # 缩放比例
+    center = []
     for video in tqdm(video_list):
         flag, name = video.split('/')
 
@@ -33,10 +37,34 @@ def gen_data(path, video_list, seg_len, seg_stride, vid_res, symm_range, sub_mea
         with open(video_path, 'r') as f:
             video_dict = json.load(f)
 
+        if 'center' in video_dict.keys():
+            video_center = np.array(video_dict['center'])
+            del video_dict['center']
+            # if scene_id in ['01']:
+            #     center.append(video_center)
+        else:
+            video_center = None
+
         video_seg_data_np, video_seg_metas = gen_video_data(video_dict, seg_len, seg_stride, scene_id, video_id)
+
+        # # region 仿射变换
+        # if scene_id == '01' and video_center is not None:
+        #     # (N, L, V, C)
+        #     video_seg_data_np[..., 0] = 640 - video_seg_data_np[..., 0]  # 横向翻转
+        #     translate_factor = video_center - center_point      # 平移量，目标域中心点减去源域中心点的平移
+        #     video_seg_data_np[..., :2] = video_center + (video_seg_data_np[..., :2] - video_center) / rescale_factory - translate_factor  # 映射公式
+        #
+        # # endregion
 
         seg_data_np.append(video_seg_data_np)
         seg_metas += video_seg_metas
+
+    # if center:
+    #     _, ax = plt.subplots(1, 1)
+    #     center = np.array(center)
+    #     ax.scatter(center[:, 0], center[:, 1])
+    #     plt.show()
+
 
     seg_data_np = np.concatenate(seg_data_np, axis=0)       # (N, L, V, C)
 
@@ -89,7 +117,10 @@ def gen_video_data(person_dict, seg_len, seg_stride, scene_id, video_id):
 
             single_person_data_np.append(keypoints)
 
-        single_person_data_np = np.stack(single_person_data_np, axis=0)
+        single_person_data_np = np.stack(single_person_data_np, axis=0)     # (N, V, C)
+
+        # 插值
+        single_person_data_np = interpolate(single_person_data_np)
 
         # 对每个人的姿态点进行滑窗
         person_seg_data_np, person_seg_metas = split_pose_to_seg(
@@ -101,6 +132,27 @@ def gen_video_data(person_dict, seg_len, seg_stride, scene_id, video_id):
     video_seg_data_np = np.concatenate(video_seg_data_np, axis=0)       # (N, L, V, C)
 
     return video_seg_data_np, video_seg_metas
+
+
+def interpolate(single_person_data_np):
+    """
+    :param single_person_data_np: (N, V, C)
+    :return:
+    """
+    single_person_data_np_xy = single_person_data_np[..., :2]
+    single_person_data_np_xy[single_person_data_np_xy < 0] = 0
+    shape = single_person_data_np_xy.shape
+    single_person_data_df_xy = pd.DataFrame(single_person_data_np_xy.reshape(shape[0], -1))
+    single_person_data_df_xy = single_person_data_df_xy.replace(0, np.nan)
+    nan_num = single_person_data_df_xy.isna().sum()
+    num_num = shape[0] - nan_num
+    ioc = np.flatnonzero(num_num > 10)
+    single_person_data_df_xy[ioc] = single_person_data_df_xy[ioc].interpolate(method='polynomial', order=2)
+    single_person_data_df_xy = single_person_data_df_xy.replace(np.nan, 0)
+    single_person_data_np_xy = np.array(single_person_data_df_xy)
+    single_person_data_np[..., :2] = single_person_data_np_xy.reshape(shape)
+
+    return single_person_data_np
 
 
 def split_pose_to_seg(single_person_data_np, single_person_frames, seg_len, seg_stride, scene_id, video_id, person_id):
@@ -180,6 +232,18 @@ def normalize(seg_data_np, vid_res, symm_range=True, sub_mean=False, flag=1):
         if sub_mean:
             mean_kp_val = np.mean(seg_data_np_normalized[..., :2], (1, 2))
             seg_data_np_normalized[..., :2] -= mean_kp_val[:, None, None, :]
+    elif flag == 1:
+
+        seg_data_np_min = np.min(seg_data_np[..., :2], axis=(0, 1))
+        seg_data_np_max = np.max(seg_data_np[..., :2], axis=(0, 1))
+
+        seg_data_np[..., :2] = (seg_data_np[..., :2] - seg_data_np_min) / (seg_data_np_max - seg_data_np_min)
+
+        seg_data_np_normalized = seg_data_np
+
+    elif flag == 2:
+        pass
+
     else:
         seg_data_np_normalized = seg_data_np
 

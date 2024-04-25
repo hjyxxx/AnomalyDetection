@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
 
-from utils.cal_metrics import cal_roc_auc, cal_pr_auc, cal_f1_acc
+from utils.cal_metrics import cal_roc_auc, cal_pr_auc, cal_f1_acc_by_percentile, cal_f1_acc_by_best
 
 
 def compute_result(preds, trues, metas, label_dict):
@@ -18,35 +18,37 @@ def compute_result(preds, trues, metas, label_dict):
 
     scene_dict = {scene: set(meta[1] for meta in metas if meta[0] == scene) for scene in scenes}    # 获得每个场景下的视频Id
 
-    labels = []     # 保存标签
-    scores = []     # 保存分数
-
-    ####
-    l = []
-    s = []
-    ####
+    clip_labels = []     # 保存片段标签
+    clip_scores = []     # 保存片段分数
+    video_labels = []       # 保存视频标签
+    video_scores = []       # 保存视频分数
 
     # 遍历每个场景
     for scene_id in scene_dict.keys():
-        scene_scores = []       # 保存场景的分数
-        scene_labels = []       # 保存场景的标签
+        scene_clip_scores = []       # 保存场景的片段分数
+        scene_clip_labels = []       # 保存场景的片段标签
+        scene_video_scores = []      # 保存场景的视频分数
+        scene_video_labels = []      # 保存场景的视频标签
 
         # 遍历每个视频
         for video_id in scene_dict[scene_id]:
-            # 得到该视频每一帧的标签
+            # 得到该视频每一个片段的标签
             video_info = f"{scene_id}_{video_id}"
-            video_label = label_dict[video_info]
-            video_label = np.array(video_label)
+            video_clip_labels = label_dict[video_info]
+            video_clip_labels = np.array(video_clip_labels)
+
+            # 得到视频标签
+            video_label = np.ones(1) if 1 in video_clip_labels else np.zeros(1)
 
             # 得到该视频的meta信息
             video_metas_index = np.where((metas[:, 0] == scene_id) &
-                                        (metas[:, 1] == video_id))[0]
+                                         (metas[:, 1] == video_id))[0]
             video_metas = metas[video_metas_index]
 
             # 得到该视频中出现的人id
             video_person_ids = set([meta[2] for meta in video_metas])
 
-            score_zeros = np.zeros(video_label.shape[0])
+            score_zeros = np.zeros(video_clip_labels.shape[0])
             video_person_scores_dict = {i: np.copy(score_zeros) for i in video_person_ids}
 
             # 对每一个人进行遍历
@@ -66,71 +68,131 @@ def compute_result(preds, trues, metas, label_dict):
                 video_person_scores_dict[person_id][person_frames] = person_scores
 
             video_person_scores = np.stack(list(video_person_scores_dict.values()))
-            video_scores = np.amax(video_person_scores, axis=0)
+            video_clip_scores = np.amax(video_person_scores, axis=0)
 
             # 平滑分数
-            # video_scores = smooth(video_scores, 40)
+            # video_clip_scores = smooth(video_clip_scores, 40)
             # 最大最小归一化
-            # video_scores = min_max(video_scores)
+            # video_clip_scores = min_max(video_clip_scores)
 
-            mean = video_scores.mean()
-            std = video_scores.std()
-            video_scores = (video_scores - mean) / std
-            #
-            video_scores = smooth(video_scores, 30)
+            # video_mean = video_clip_scores.mean()
+            # video_std = video_clip_scores.std()
+            # video_clip_scores = (video_clip_scores - video_mean) / video_std
 
-            scene_scores.append(video_scores)
-            scene_labels.append(video_label)
+            video_mean = np.mean(video_clip_scores)
 
-            ####
-            s.append(mean)
-            l.append(1 if 1 in video_label else 0)
-            ####
+            video_clip_scores = smooth(video_clip_scores, 30)
 
+            scene_clip_scores.append(video_clip_scores)
+            scene_clip_labels.append(video_clip_labels)
 
-        scene_scores = np.concatenate(scene_scores)
-        scene_labels = np.concatenate(scene_labels)
+            scene_video_scores.append(video_mean)
+            scene_video_labels.append(video_label)
 
-        # scene_scores = min_max(scene_scores)
+        scene_clip_scores = np.concatenate(scene_clip_scores)
+        scene_clip_labels = np.concatenate(scene_clip_labels)
+        scene_video_labels = np.concatenate(scene_video_labels)
+        scene_video_scores = np.array(scene_video_scores)
 
-        # mean = scene_scores.mean()
-        # std = scene_scores.std()
-        # scene_scores = (scene_scores - mean) / std
+        scene_clip_scores = min_max(scene_clip_scores)
 
-        scores.append(scene_scores)
-        labels.append(scene_labels)
+        # mean = scene_clip_scores.mean()
+        # std = scene_clip_scores.std()
+        # scene_clip_scores = (scene_clip_scores - mean) / std
 
-    scores = np.concatenate(scores)
-    labels = np.concatenate(labels)
+        clip_scores.append(scene_clip_scores)
+        clip_labels.append(scene_clip_labels)
+        video_scores.append(scene_video_scores)
+        video_labels.append(scene_video_labels)
+
+    clip_scores = np.concatenate(clip_scores)
+    clip_labels = np.concatenate(clip_labels)
+    video_scores = np.concatenate(video_scores)
+    video_labels = np.concatenate(video_labels)
 
     # mean = scores.mean()
     # std = scores.std()
     # scores = (scores - mean) / std
     # scores = min_max(scores)
 
-    fpr, tpr, roc_auc = cal_roc_auc(scores, labels)
-    _, _, pr_auc = cal_pr_auc(scores, labels)
-    acc, f1, precision, recall = cal_f1_acc(scores, labels)
+    clip_fpr, clip_tpr, clip_roc_auc = cal_roc_auc(clip_scores, clip_labels)
+    _, _, clip_pr_auc = cal_pr_auc(clip_scores, clip_labels)
+    clip_threshold_p, clip_f1_p, clip_acc_p, clip_precision_p, clip_recall_p, clip_TP_p, clip_FP_p, clip_TN_p, clip_FN_p, clip_TPR_p, clip_FPR_p = cal_f1_acc_by_percentile(clip_scores, clip_labels)
+    # clip_threshold_b, clip_f1_b, clip_acc_b, clip_precision_b, clip_recall_b, clip_TP_b, clip_FP_b, clip_TN_b, clip_FN_b, clip_TPR_b, clip_FPR_b = cal_f1_acc_by_best(clip_scores, clip_labels)
 
-    ####
-    s = np.array(s)
-    l = np.array(l)
-    _, _, auc_video = cal_roc_auc(s, l)
-    ####
+    video_fpr, video_tpr, video_roc_auc = cal_roc_auc(video_scores, video_labels)
+    _, _, video_pr_auc = cal_pr_auc(video_scores, video_labels)
+    video_threshold_p, video_f1_p, video_acc_p, video_precision_p, video_recall_p, video_TP_p, video_FP_p, video_TN_p, video_FN_p, video_TPR_p, video_FPR_p = cal_f1_acc_by_percentile(video_scores, video_labels)
+    # video_threshold_b, video_f1_b, video_acc_b, video_precision_b, video_recall_b, video_TP_b, video_FP_b, video_TN_b, video_FN_b, video_TPR_b, video_FPR_b = cal_f1_acc_by_best(video_scores, video_labels)
 
     results = {
-        "fpr": fpr,
-        "tpr": tpr,
-        "AUC@ROC": roc_auc,
-        "AUC@PR": pr_auc,
-        "F1": f1,
-        "ACC": acc,
-        "precision": precision,
-        "recall": recall,
-        "AUC@Video": auc_video
+        "clip": {
+            "percentile@80": {
+                "AUC@ROC": clip_roc_auc.astype(float),
+                "AUC@PR": clip_pr_auc.astype(float),
+                "Threshold": clip_threshold_p.astype(float),
+                "F1": clip_f1_p.astype(float),
+                "ACC": clip_acc_p.astype(float),
+                "precision": clip_precision_p.astype(float),
+                "recall": clip_recall_p.astype(float),
+                "TP": clip_TP_p.astype(float),
+                "FP": clip_FP_p.astype(float),
+                "TN": clip_TN_p.astype(float),
+                "FN": clip_FN_p.astype(float),
+                "TPR": clip_TPR_p.astype(float),
+                "FPR": clip_FPR_p.astype(float)
+            },
+            # "best": {
+            #     "AUC@ROC": clip_roc_auc.astype(float),
+            #     "AUC@PR": clip_pr_auc.astype(float),
+            #     "Threshold": clip_threshold_b.astype(float),
+            #     "F1": clip_f1_b.astype(float),
+            #     "ACC": clip_acc_b.astype(float),
+            #     "precision": clip_precision_b.astype(float),
+            #     "recall": clip_recall_b.astype(float),
+            #     "TP": clip_TP_b.astype(float),
+            #     "FP": clip_FP_b.astype(float),
+            #     "TN": clip_TN_b.astype(float),
+            #     "FN": clip_FN_b.astype(float),
+            #     "TPR": clip_TPR_b.astype(float),
+            #     "FPR": clip_FPR_b.astype(float)
+            # }
+        },
+        "video": {
+            "percentile@80": {
+                "AUC@ROC": video_roc_auc.astype(float),
+                "AUC@PR": video_pr_auc.astype(float),
+                "Threshold": video_threshold_p.astype(float),
+                "F1": video_f1_p.astype(float),
+                "ACC": video_acc_p.astype(float),
+                "precision": video_precision_p.astype(float),
+                "recall": video_recall_p.astype(float),
+                "TP": video_TP_p.astype(float),
+                "FP": video_FP_p.astype(float),
+                "TN": video_TN_p.astype(float),
+                "FN": video_FN_p.astype(float),
+                "TPR": video_TPR_p.astype(float),
+                "FPR": video_FPR_p.astype(float)
+            },
+            # "best": {
+            #     "AUC@ROC": video_roc_auc.astype(float),
+            #     "AUC@PR": video_pr_auc.astype(float),
+            #     "Threshold": video_threshold_b.astype(float),
+            #     "F1": video_f1_b.astype(float),
+            #     "ACC": video_acc_b.astype(float),
+            #     "precision": video_precision_b.astype(float),
+            #     "recall": video_recall_b.astype(float),
+            #     "TP": video_TP_b.astype(float),
+            #     "FP": video_FP_b.astype(float),
+            #     "TN": video_TN_b.astype(float),
+            #     "FN": video_FN_b.astype(float),
+            #     "TPR": video_TPR_b.astype(float),
+            #     "FPR": video_FPR_b.astype(float)
+            # }
+        }
     }
 
-    return results, scores, labels
+    return results, clip_scores, clip_labels
 
 
 def get_scores(trues, preds):

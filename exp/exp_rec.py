@@ -205,7 +205,12 @@ class ExpRec(ExpBasic):
             save_gradients(folder_path, self.model, epoch=epoch)
             save_parameters(self.model, epoch=epoch, writer=writer)
 
-            early_stopping(-results['AUC@ROC'], self.model, folder_path)
+            if self.args.data in ['asd', 'asd2']:
+                score = -results['video']['percentile@80']['AUC@ROC']
+            else:
+                score = -results['clip']['percentile@80']['AUC@ROC']
+
+            early_stopping(score, self.model, folder_path)
             if early_stopping.early_stop:
                 cprint.warn('Early Stopping')
                 break
@@ -221,7 +226,7 @@ class ExpRec(ExpBasic):
 
         folder_path = self.args.folder_path
         self.model.load_state_dict(torch.load(os.path.join(folder_path, 'weights', 'model.pth')))
-        folder_path = folder_path.replace('/', '_')
+        folder_path = folder_path.replace('/', '_').replace('\\', '_')
 
         # 创建文件夹
         folder_path = './test_results/' + folder_path + "/"
@@ -278,9 +283,9 @@ class ExpRec(ExpBasic):
         # 计算score
         results, sc, gt = compute_result(test_total_preds, test_total_trues, test_dataset.seg_metas, test_dataset.label_dict)
 
-        print('| AUC@ROC {:5.4f} | AUC@PR {:5.4f} |'.format(
-            results['AUC@ROC'], results['AUC@PR']
-        ))
+        # print('| AUC@ROC {:5.4f} | AUC@PR {:5.4f} |'.format(
+        #     results['AUC@ROC'], results['AUC@PR']
+        # ))
         np.save(folder_path + 'test_grounds.npy', gt, allow_pickle=True)
         np.save(folder_path + 'test_scores.npy', sc, allow_pickle=True)
         np.save(folder_path + "test_label_dict", test_dataset.label_dict, allow_pickle=True)

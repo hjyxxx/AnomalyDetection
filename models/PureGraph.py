@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from models.components.embedding import Embedding, ConvEmbedding, LinearEmbedding, PatchEmbedding, TFWEmbedding
+from models.components.embedding import Embedding, ConvEmbedding, LinearEmbedding, PatchEmbedding
 from models.components.gcn import ChebyshevConv, GraphAttentionConv
 from models.components.graph import Graph
 
@@ -69,7 +69,7 @@ class Model(nn.Module):
 
         fusion = configs.fusion
 
-        self.node_num = configs.node_num
+        self.pose_num = configs.pose_num
 
         # graph = Graph(layout='openpose', strategy='pure', seg_len=seg_len)
         #
@@ -81,7 +81,7 @@ class Model(nn.Module):
 
         patch_num = int(np.floor((seg_len + padding - patch_len) / stride) + 1)
 
-        adj = torch.ones((patch_num * self.node_num, patch_num * self.node_num))
+        adj = torch.ones((patch_num * self.pose_num, patch_num * self.pose_num))
 
         self.embedding = PatchEmbedding(in_channels=in_features, embedding_channels=embedding_channels,
                                         patch_len=patch_len, stride=stride, padding=padding)
@@ -166,7 +166,7 @@ class Model(nn.Module):
         """
 
         # (B, N, embedding_channels)-->(B, V, patch_num, embedding_channels)
-        x = x.reshape(x.shape[0], self.node_num, -1, x.shape[-1])
+        x = x.reshape(x.shape[0], self.pose_num, -1, x.shape[-1])
 
         if self.task_name == 'rec':
             # (B, V, patch_num, embedding_channels)-->(B, V, seg_len*C)

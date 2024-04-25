@@ -1,8 +1,10 @@
 seg_len: 16
 seg_stride: 1
 for_len: 16
-node_num: 18
+pose_num: 18
 ckp: []
+layout: 'openpose'
+strategy: 'NaturalConnection'
 normalize_flag: 0
 vid_res: [856, 480]
 symm_range: True

@@ -1,7 +1,7 @@
 seg_len: 12
 seg_stride: 1
 for_len: 12
-node_num: 18
+pose_num: 18
 ckp: [4, 10, 13]
 normalize_flag: 0
 vid_res: [1920, 1080]

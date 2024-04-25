@@ -1,11 +1,13 @@
-seg_len: 12
+seg_len: 30
 seg_stride: 1
 for_len: 0
-node_num: 18
+pose_num: 18
 ckp: [4, 10, 13]
+layout: 'asd'
+strategy: 'NaturalConnection'
 normalize_flag: 0
-vid_res: [1920, 1080]
-symm_range: True
+vid_res: [640, 480]
+symm_range: False
 sub_mean: False
 seg_conf_th: 0.0
 transform: False

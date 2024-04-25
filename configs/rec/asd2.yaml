@@ -1,0 +1,23 @@
+seg_len: 30
+seg_stride: 1
+for_len: 0
+pose_num: 18
+ckp: [4, 10, 13]
+layout: 'asd'
+strategy: 'FullConnect'
+normalize_flag: 0
+vid_res: [640, 480]
+symm_range: False
+sub_mean: False
+seg_conf_th: 0.0
+transform: False
+divide: "random"
+train_txt_path: "configs/SH_Train.txt"
+test_txt_path: "configs/SH_Test.txt"
+train_ratio: 0.7
+vali_ratio: 0.0
+test_ratio: 0.3
+data_shuffle: False
+train_scenes: [2, 3]
+vali_scenes: [2, 3]
+test_scenes: [1]

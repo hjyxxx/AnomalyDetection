@@ -123,7 +123,6 @@ class DatasetPR(DatasetBase):
         #     seg_len = self.seg_len + self.for_len
         # else:
         #     seg_len = self.seg_len
-
         self.seg_data_np, self.seg_metas = gen_data(self.path, video_list, self.seg_len+self.for_len, self.seg_stride,
                                                     self.vid_res, self.symm_range, self.sub_mean, self.normalize_flag, self.seg_conf_th)
 

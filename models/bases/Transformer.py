@@ -63,31 +63,31 @@ class Model(nn.Module):
         d_ff = configs.d_ff
         dropout = configs.dropout
 
-        node_num = configs.node_num
+        pose_num = configs.pose_num
 
-        self.conv_embedding = ConvEmbedding(in_channels=in_features * node_num, embedding_channels=embedding_channels * node_num)
-        self.position_embedding = PositionEmbedding(embedding_channels=embedding_channels * node_num)
+        self.conv_embedding = ConvEmbedding(in_channels=in_features * pose_num, embedding_channels=embedding_channels * pose_num)
+        self.position_embedding = PositionEmbedding(embedding_channels=embedding_channels * pose_num)
 
         self.encoder = Encoder(
             encoder_layers=[
                 EncoderLayer(
                     attention_layer=AttentionLayer(
                         attention=FullAttention(),
-                        in_channels=embedding_channels * node_num,
+                        in_channels=embedding_channels * pose_num,
                         n_heads=8
                     ),
-                    in_channels=embedding_channels * node_num,
-                    d_ff=d_ff * node_num,
+                    in_channels=embedding_channels * pose_num,
+                    d_ff=d_ff * pose_num,
                     dropout=dropout
                 ) for _ in range(e_layers)
             ]
         )
 
         self.decoder = nn.Sequential(
-            nn.Linear(in_features=embedding_channels * node_num, out_features=out_features * node_num),
+            nn.Linear(in_features=embedding_channels * pose_num, out_features=out_features * pose_num),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(in_features=out_features * node_num, out_features=out_features * node_num)
+            nn.Linear(in_features=out_features * pose_num, out_features=out_features * pose_num)
         )
 
     def emb(self, x):

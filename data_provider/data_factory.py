@@ -56,11 +56,11 @@ def data_provider(args, flag):
     test_scenes = args.test_scenes
 
     folder_path = args.folder_path
-    cash_path = args.cash_path
-    cash_flag = args.cash_flag
+    cache_path = args.cache_path
+    cache_flag = args.cache_flag
 
     if not is_training:
-        cprint.info("Loading data cash")
+        cprint.info("Loading data cache")
         dataset_path = os.path.join(args.folder_path, f'{flag}_dataset.pkl')
         dataloader_path = os.path.join(args.folder_path, f'{flag}_dataloader.pkl')
         with open(dataset_path, 'rb') as f:
@@ -70,10 +70,10 @@ def data_provider(args, flag):
 
         return dataset, dataloader
 
-    if cash_flag and not debug:
-        cprint.info("Loading data cash")
-        dataset_path = os.path.join(cash_path, f'{flag}_dataset_cash.pkl')
-        dataloader_path = os.path.join(cash_path, f'{flag}_dataloader_cash.pkl')
+    if cache_flag and not debug:
+        cprint.info("Loading data cache")
+        dataset_path = os.path.join(cache_path, f'{flag}_dataset_cache.pkl')
+        dataloader_path = os.path.join(cache_path, f'{flag}_dataloader_cache.pkl')
         with open(dataset_path, 'rb') as f:
             dataset = dill.load(f)
         with open(dataloader_path, 'rb') as f:
@@ -153,9 +153,9 @@ def data_provider(args, flag):
         raise ValueError("Do Not Exist This Value: {}".format(task_name))
 
     if not debug:
-        # 保存dataset与dataloader至总cash
-        dataset_path = os.path.join(cash_path, f'{flag}_dataset_cash.pkl')
-        dataloader_path = os.path.join(cash_path, f'{flag}_dataloader_cash.pkl')
+        # 保存dataset与dataloader至总cache
+        dataset_path = os.path.join(cache_path, f'{flag}_dataset_cache.pkl')
+        dataloader_path = os.path.join(cache_path, f'{flag}_dataloader_cache.pkl')
         save_data(dataset_path, dataset)
         save_data(dataloader_path, dataloader)
 

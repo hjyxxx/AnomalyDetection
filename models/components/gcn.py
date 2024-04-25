@@ -5,14 +5,18 @@ from model_utils.utils import rescaled_L
 
 
 class GraphAttentionConv(nn.Module):
-    def __init__(self, adj, in_channels, out_channels, n_heads, is_concat=True, dropout=0.1):
+    def __init__(self, in_channels, out_channels, adj, n_heads, is_concat=True, dropout=0.1, share_weights=False):
         super(GraphAttentionConv, self).__init__()
 
-        adj = adj.unsqueeze(-1)
+        if len(adj.shape) == 2:
+            # (N, N)-->(N, N, 1)
+            adj = adj.unsqueeze(-1)
+            adj = adj.repeat(1, 1, n_heads)
         self.register_buffer('adj', adj)
 
         self.is_concat = is_concat
         self.n_heads = n_heads
+        self.share_weights = share_weights
 
         if is_concat:
             assert out_channels % n_heads == 0
@@ -21,10 +25,16 @@ class GraphAttentionConv(nn.Module):
         else:
             self.n_hidden = out_channels
 
-        self.linear = nn.Linear(in_features=in_channels, out_features=self.n_hidden * self.n_heads, bias=False)
-        self.attn = nn.Linear(self.n_hidden * 2, 1, bias=False)
+        self.linear_l = nn.Linear(in_features=in_channels, out_features=self.n_hidden * self.n_heads, bias=False)
 
-        self.activate = nn.LeakyReLU(negative_slope=0.2)
+        if share_weights:
+            self.linear_r = self.linear_l
+        else:
+            self.linear_r = nn.Linear(in_features=in_channels, out_features=self.n_hidden * self.n_heads, bias=False)
+
+        self.attn = nn.Linear(self.n_hidden, 1, bias=False)
+
+        self.activate1 = nn.LeakyReLU(negative_slope=0.2)
         self.softmax = nn.Softmax(dim=-1)
         self.dropout = nn.Dropout(dropout)
 
@@ -37,22 +47,22 @@ class GraphAttentionConv(nn.Module):
         b, n_nodes = x.shape[0], x.shape[1]
 
         # (B, N, C)-->(B, N, heads, n_hidden)
-        g = self.linear(x).view(b, n_nodes, self.n_heads, self.n_hidden)
+        g_l = self.linear_l(x).view(b, n_nodes, self.n_heads, self.n_hidden)
+        g_r = self.linear_r(x).view(b, n_nodes, self.n_heads, self.n_hidden)
 
         # (B, N, heads, n_hidden)-->(B, N*N, heads, n_hidden)
-        g_repeat = g.repeat(1, n_nodes, 1, 1)
-
+        g_l_repeat = g_l.repeat(1, n_nodes, 1, 1)
         # (B, N, heads, n_hidden)-->(B, N*N, heads, n_hidden)
-        g_repeat_interleave = g.repeat_interleave(n_nodes, dim=1)
+        g_r_repeat_interleave = g_r.repeat_interleave(n_nodes, dim=1)
 
-        # (B, N*N, heads, n_hidden)-->(B, N*N, heads, 2*n_hidden)
-        g_concat = torch.cat([g_repeat_interleave, g_repeat], dim=-1)
+        # (B, N*N, heads, n_hidden)-->(B, N*N, heads, n_hidden)
+        g_sum = g_l_repeat + g_r_repeat_interleave
 
-        # (B, N*N, heads, 2*n_hidden)-->(B, N, N, heads, 2 * n_hidden)
-        g_concat = g_concat.view(b, n_nodes, n_nodes, self.n_heads, 2 * self.n_hidden)
+        # (B, N*N, heads, n_hidden)-->(B, N, N, heads, n_hidden)
+        g_sum = g_sum.view(b, n_nodes, n_nodes, self.n_heads, self.n_hidden)
 
-        # (B, N, N, heads, 2 * n_hidden)-->(B, N, N, heads, 1)
-        e = self.activate(self.attn(g_concat))
+        # (B, N, N, heads, n_hidden)-->(B, N, N, heads, 1)
+        e = self.attn(self.activate1(g_sum))
 
         # (B, N, N, heads, 1)-->(B, N, N, heads)
         e = e.squeeze(-1)
@@ -67,7 +77,8 @@ class GraphAttentionConv(nn.Module):
 
         a = self.dropout(a)
 
-        attn_res = torch.einsum('bijh,bjhf->bihf', a, g)
+        # (B, N, N, heads)(B, N, heads, n_hidden)-->(B, N, heads, n_hidden)
+        attn_res = torch.einsum('bijh,bjhf->bihf', a, g_r)
 
         if self.is_concat:
             return attn_res.reshape(b, n_nodes, self.n_heads * self.n_hidden)
@@ -124,25 +135,14 @@ class ChebyshevConv(nn.Module):
         return self.activate(out)
 
 
-class GraphConv(nn.Module):
-    def __init__(self, in_channels, out_channels, adj):
-        super(GraphConv, self).__init__()
-
-    def forward(self, x):
-        """
-
-        :param x:
-        :return:
-        """
-
-
 if __name__ == '__main__':
 
     torch.random.manual_seed(2024)
 
     adj = torch.ones(size=(180, 180))
 
-    model = ChebyshevConv(2, 64, 3, adj)
+    # model = ChebyshevConv(2, 64, 3, adj)
+    model = GraphAttentionConv(in_channels=2, out_channels=64, adj=adj, n_heads=8)
 
     for param in model.parameters():
         if len(param.shape) > 1:

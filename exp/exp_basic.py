@@ -4,7 +4,7 @@ import dill
 import torch
 from cprint import cprint
 
-from models import PureGraph, TFWGraph
+from models import PureGraph, TFWGraph, TFWModel, TModel
 from models.bases import TCN, Transformer
 
 
@@ -15,7 +15,9 @@ class ExpBasic:
             'TCN': TCN,
             'Transformer': Transformer,
             'PureGraph': PureGraph,
-            'TFWGraph': TFWGraph
+            'TFWGraph': TFWGraph,
+            'TModel': TModel,
+            'TFWModel': TFWModel
 
         }
 

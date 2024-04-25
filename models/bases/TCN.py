@@ -87,19 +87,19 @@ class Model(nn.Module):
         d_ff = configs.d_ff
         dropout = configs.dropout
 
-        node_num = configs.node_num
+        pose_num = configs.pose_num
 
-        self.embedding = ConvEmbedding(in_channels=in_features * node_num, embedding_channels=embedding_channels * node_num)
+        self.embedding = ConvEmbedding(in_channels=in_features * pose_num, embedding_channels=embedding_channels * pose_num)
         # self.embedding = Embedding(
         #     embedding_layers=[
-        #         ConvEmbedding(in_channels=in_features * node_num, embedding_channels=embedding_channels * node_num)
+        #         ConvEmbedding(in_channels=in_features * pose_num, embedding_channels=embedding_channels * pose_num)
         #     ],
         #     dropout=dropout
         # )
 
-        num_inputs = embedding_channels * node_num
-        num_channels = [embedding_channels * node_num, d_ff * node_num, d_ff * node_num, embedding_channels * node_num]
-        num_outputs = out_features * node_num
+        num_inputs = embedding_channels * pose_num
+        num_channels = [embedding_channels * pose_num, d_ff * pose_num, d_ff * pose_num, embedding_channels * pose_num]
+        num_outputs = out_features * pose_num
 
 
         self.encoder = TemporalConvNet(num_inputs=num_inputs, num_channels=num_channels, dropout=dropout)
